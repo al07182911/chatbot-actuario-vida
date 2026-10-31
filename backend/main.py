@@ -5,6 +5,8 @@ from backend.conversacion_economia import ConversacionEconomia
 
 from backend.conversacion_beneficios import ConversacionBeneficios
 
+from backend.conversacion_nps import ConversacionNPS
+
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
@@ -76,8 +78,10 @@ class RespuestaChat(BaseModel):
 class SolicitudConversacion(BaseModel):
     sesion_id: Optional[str] = None
     mensaje: Optional[str] = None
+    
 sesiones_economia = {}
 sesiones_beneficios = {}
+sesiones_nps = {}
 
 @app.get("/health")
 def verificar_estado():
@@ -270,5 +274,66 @@ def conversar_beneficios(datos: SolicitudConversacion):
         "sesion_id": datos.sesion_id,
         "estado": conversacion.estado,
         "respuesta": respuesta
+    }
+
+
+@app.post("/conversacion/nps")
+def conversar_nps(datos: SolicitudConversacion):
+
+    # Iniciar una nueva conversacion
+    if datos.sesion_id is None:
+
+        if datos.mensaje is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="Para iniciar, no envies un mensaje."
+            )
+
+        sesion_id = str(uuid4())
+
+        conversacion = ConversacionNPS()
+        respuesta = conversacion.iniciar()
+
+        sesiones_nps[sesion_id] = conversacion
+
+        return {
+            "sesion_id": sesion_id,
+            "estado": conversacion.estado,
+            "respuesta": respuesta,
+            "folio": None
+        }
+
+    # Verificar que exista la sesion
+    if datos.sesion_id not in sesiones_nps:
+        raise HTTPException(
+            status_code=404,
+            detail="Sesion no encontrada."
+        )
+
+    # Validar el mensaje
+    if not datos.mensaje or not datos.mensaje.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="Debes enviar un mensaje."
+        )
+
+    conversacion = sesiones_nps[datos.sesion_id]
+
+    # Evitar continuar sesiones finalizadas
+    if conversacion.estado in ["cancelacion", "asesor"]:
+        return {
+            "sesion_id": datos.sesion_id,
+            "estado": conversacion.estado,
+            "respuesta": "La conversacion ha finalizado.",
+            "folio": conversacion.folio
+        }
+
+    respuesta = conversacion.procesar(datos.mensaje)
+
+    return {
+        "sesion_id": datos.sesion_id,
+        "estado": conversacion.estado,
+        "respuesta": respuesta,
+        "folio": conversacion.folio
     }
 
