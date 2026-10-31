@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
 from openai import OpenAI
+from backend.cotizador import DatosCotizacion, calcular_alternativa
 #from google.colab import userdata
 import os
 from typing import List
@@ -121,3 +122,24 @@ def procesar_mensaje(datos: MensajeCliente):
             status_code=503,
             detail="No fue posible clasificar el mensaje."
         )
+    
+@app.post("/cotizar")
+def cotizar_seguro(datos: DatosCotizacion):
+    """
+    Genera una alternativa academica de cobertura
+    utilizando una tarifa fija de $1.50 por millar.
+    """
+
+    resultado = calcular_alternativa(datos)
+
+    return {
+        "estado": "cotizacion_generada",
+        "tipo": "simulacion_academica",
+        "tarifa_por_millar": 1.50,
+        "resultado": resultado,
+        "advertencia": (
+            "Esta simulacion es exclusivamente academica "
+            "y no representa una cotizacion oficial."
+        )
+    }
+
