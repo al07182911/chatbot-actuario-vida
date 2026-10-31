@@ -7,6 +7,8 @@ from backend.conversacion_beneficios import ConversacionBeneficios
 
 from backend.conversacion_nps import ConversacionNPS
 
+from backend.coordinador import CoordinadorChatbot
+
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
@@ -78,10 +80,20 @@ class RespuestaChat(BaseModel):
 class SolicitudConversacion(BaseModel):
     sesion_id: Optional[str] = None
     mensaje: Optional[str] = None
+
+
+class SolicitudChatUnificado(BaseModel):
+    sesion_id: Optional[str] = None
+    mensaje: str = Field(
+        min_length=1,
+        max_length=2000
+    )
+
     
 sesiones_economia = {}
 sesiones_beneficios = {}
 sesiones_nps = {}
+sesiones_unificadas = {}
 
 @app.get("/health")
 def verificar_estado():
@@ -336,4 +348,128 @@ def conversar_nps(datos: SolicitudConversacion):
         "respuesta": respuesta,
         "folio": conversacion.folio
     }
+
+
+@app.post("/chat/unificado")
+def chat_unificado(datos: SolicitudChatUnificado):
+
+    mensaje = datos.mensaje.strip()
+
+    if not mensaje:
+        raise HTTPException(
+            status_code=422,
+            detail="El mensaje no puede estar vacio."
+        )
+
+    # Primera interaccion: clasificar el motivo
+    if datos.sesion_id is None:
+
+        # Permitir cancelar o solicitar asesor sin
+        # necesidad de consultar el modelo de IA.
+        if mensaje.lower() in [
+            "cancelar",
+            "quiero cancelar",
+            "continuar cancelacion",
+            "continuar con la cancelacion"
+        ]:
+            return {
+                "sesion_id": None,
+                "estado": "finalizada",
+                "ruta_activa": None,
+                "respuesta": (
+                    "Puedes continuar con la cancelacion. "
+                    "Este prototipo no realiza cancelaciones reales."
+                )
+            }
+
+        if mensaje.lower() in [
+            "asesor",
+            "hablar con un asesor",
+            "atencion humana"
+        ]:
+            return {
+                "sesion_id": None,
+                "estado": "finalizada",
+                "ruta_activa": None,
+                "respuesta": (
+                    "Puedes solicitar atencion humana. "
+                    "Este prototipo no conecta con asesores reales."
+                )
+            }
+
+        try:
+            respuesta_ia = cliente_ia.responses.create(
+                model="gpt-6-luna",
+                instructions=INSTRUCCIONES,
+                input=mensaje,
+                max_output_tokens=300,
+                store=False
+            )
+
+            resultado = json.loads(
+                respuesta_ia.output_text
+            )
+
+            motivos = resultado["motivos"]
+
+            # Validar las categorias del modelo
+            if (
+                not isinstance(motivos, list)
+                or any(
+                    not isinstance(m, str)
+                    or m not in CATEGORIAS
+                    for m in motivos
+                )
+                or len(motivos) != len(set(motivos))
+            ):
+                raise ValueError(
+                    "Clasificacion no valida."
+                )
+
+            coordinador = CoordinadorChatbot()
+
+            respuesta = coordinador.recibir_clasificacion(
+                motivos
+            )
+
+            sesion_id = str(uuid4())
+
+            sesiones_unificadas[sesion_id] = coordinador
+
+            return {
+                "sesion_id": sesion_id,
+                "estado": coordinador.estado,
+                "ruta_activa": coordinador.ruta_activa,
+                "motivos": motivos,
+                "respuesta": respuesta
+            }
+
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "No fue posible clasificar el mensaje. "
+                    "Intenta nuevamente."
+                )
+            )
+
+    # Interacciones posteriores: recuperar la sesion
+    if datos.sesion_id not in sesiones_unificadas:
+        raise HTTPException(
+            status_code=404,
+            detail="Sesion no encontrada."
+        )
+
+    coordinador = sesiones_unificadas[datos.sesion_id]
+
+    respuesta = coordinador.procesar(mensaje)
+
+    return {
+        "sesion_id": datos.sesion_id,
+        "estado": coordinador.estado,
+        "ruta_activa": coordinador.ruta_activa,
+        "motivos": coordinador.motivos,
+        "respuesta": respuesta
+    }
+
 
