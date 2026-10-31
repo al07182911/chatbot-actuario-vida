@@ -1,0 +1,55 @@
+
+import json
+
+catalogo = {
+    "VIDA-001": [
+        {
+            "nombre": "Asistencia funeraria",
+            "descripcion": "Orientacion y coordinacion de servicios funerarios conforme a las condiciones del servicio.",
+            "vigente": True
+        },
+        {
+            "nombre": "Orientacion medica telefonica",
+            "descripcion": "Orientacion general de salud mediante una linea telefonica de asistencia.",
+            "vigente": True
+        },
+        {
+            "nombre": "Promocion de bienestar",
+            "descripcion": "Beneficio promocional de demostracion.",
+            "vigente": False
+        }
+    ],
+    "VIDA-002": [
+        {
+            "nombre": "Asistencia funeraria",
+            "descripcion": "Orientacion y coordinacion de servicios funerarios conforme a las condiciones del servicio.",
+            "vigente": True
+        },
+        {
+            "nombre": "Apoyo psicologico telefonico",
+            "descripcion": "Servicio de orientacion emocional telefonica de demostracion.",
+            "vigente": True
+        }
+    ],
+    "VIDA-003": [
+        {
+            "nombre": "Orientacion medica telefonica",
+            "descripcion": "Orientacion general de salud mediante una linea telefonica de asistencia.",
+            "vigente": True
+        }
+    ]
+}
+
+with open(
+    "/content/beneficios_polizas.json",
+    "w",
+    encoding="utf-8"
+) as archivo:
+    json.dump(
+        catalogo,
+        archivo,
+        ensure_ascii=False,
+        indent=2
+    )
+
+print("Catalogo de beneficios creado correctamente.")
