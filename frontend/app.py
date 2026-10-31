@@ -1,0 +1,159 @@
+
+import os
+import requests
+import streamlit as st
+
+# Configuracion de la aplicacion
+st.set_page_config(
+    page_title="Chatbot Actuario Vida",
+    page_icon="🛡️",
+    layout="centered"
+)
+
+# Direccion del backend FastAPI
+API_URL = os.getenv(
+    "BACKEND_URL",
+    "http://localhost:8000"
+).rstrip("/")
+
+# Encabezado
+st.title("Chatbot Actuario Vida")
+
+st.caption(
+    "Asistente inteligente para seguros de vida"
+)
+
+st.info(
+    "Prototipo academico. No realiza cotizaciones "
+    "oficiales, modificaciones ni cancelaciones "
+    "reales de polizas."
+)
+
+# Inicializar el estado de la interfaz
+if "mensajes" not in st.session_state:
+    st.session_state.mensajes = [
+        {
+            "role": "assistant",
+            "content": (
+                "¡Hola! Soy el asistente virtual "
+                "de seguros de vida. "
+                "Puedo ayudarte a explorar alternativas "
+                "antes de cancelar tu poliza. "
+                "¿En que puedo ayudarte?"
+            )
+        }
+    ]
+
+if "sesion_id" not in st.session_state:
+    st.session_state.sesion_id = None
+
+if "finalizada" not in st.session_state:
+    st.session_state.finalizada = False
+
+
+# Barra lateral
+with st.sidebar:
+
+    st.header("Chatbot Actuario Vida")
+
+    st.write("Rutas de atencion:")
+    st.write("1. Economia personal")
+    st.write("2. Beneficios del seguro")
+    st.write("3. Mala experiencia de servicio")
+
+    if st.button(
+        "Nueva conversacion",
+        use_container_width=True
+    ):
+        st.session_state.mensajes = [
+            {
+                "role": "assistant",
+                "content": (
+                    "¡Hola! ¿En que puedo ayudarte "
+                    "con tu seguro de vida?"
+                )
+            }
+        ]
+
+        st.session_state.sesion_id = None
+        st.session_state.finalizada = False
+        st.rerun()
+
+
+# Mostrar historial de conversacion
+for mensaje in st.session_state.mensajes:
+
+    with st.chat_message(mensaje["role"]):
+        st.markdown(mensaje["content"])
+
+
+# Recibir mensaje del cliente
+mensaje_cliente = st.chat_input(
+    "Escribe tu mensaje...",
+    disabled=st.session_state.finalizada
+)
+
+if mensaje_cliente:
+
+    # Mostrar mensaje del cliente
+    st.session_state.mensajes.append({
+        "role": "user",
+        "content": mensaje_cliente
+    })
+
+    with st.chat_message("user"):
+        st.markdown(mensaje_cliente)
+
+    # Preparar solicitud a FastAPI
+    datos = {
+        "mensaje": mensaje_cliente
+    }
+
+    if st.session_state.sesion_id is not None:
+        datos["sesion_id"] = (
+            st.session_state.sesion_id
+        )
+
+    # Consultar el backend
+    with st.chat_message("assistant"):
+
+        with st.spinner("Analizando tu mensaje..."):
+
+            try:
+                respuesta = requests.post(
+                    f"{API_URL}/chat/unificado",
+                    json=datos,
+                    timeout=90
+                )
+
+                respuesta.raise_for_status()
+
+                resultado = respuesta.json()
+
+                texto_respuesta = resultado["respuesta"]
+
+                st.session_state.sesion_id = (
+                    resultado.get("sesion_id")
+                )
+
+                if resultado.get("estado") == "finalizada":
+                    st.session_state.finalizada = True
+
+                st.markdown(texto_respuesta)
+
+                st.session_state.mensajes.append({
+                    "role": "assistant",
+                    "content": texto_respuesta
+                })
+
+            except requests.exceptions.RequestException:
+                st.error(
+                    "No fue posible conectar con el chatbot. "
+                    "Verifica que el backend este disponible."
+                )
+
+            except (ValueError, KeyError):
+                st.error(
+                    "El backend devolvio una respuesta "
+                    "que no pudo procesarse."
+                )
