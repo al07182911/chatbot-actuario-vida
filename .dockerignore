@@ -1,0 +1,46 @@
+
+# Git y configuracion del repositorio
+.git
+.github
+.gitignore
+
+# Credenciales
+.env
+.env.*
+!.env.example
+**/secrets.toml
+*.pem
+*.key
+secrets.json
+
+# Archivos temporales de Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Pruebas y cobertura
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Cuadernos y archivos temporales
+.ipynb_checkpoints/
+*.ipynb
+*.log
+*.tmp
+*.bak
+
+# Documentacion generada
+docs/_build/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
