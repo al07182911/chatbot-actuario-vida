@@ -2,6 +2,8 @@ import os
 import hmac
 import requests
 import streamlit as st
+import time
+
 
 # Configuracion de la aplicacion
 st.set_page_config(
@@ -23,6 +25,17 @@ CLAVE_ACCESO = os.getenv(
 
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
+
+# Control basico de intentos de acceso
+MAX_INTENTOS = 5
+BLOQUEO_SEGUNDOS = 300
+
+if "intentos_fallidos" not in st.session_state:
+    st.session_state.intentos_fallidos = 0
+
+if "bloqueado_hasta" not in st.session_state:
+    st.session_state.bloqueado_hasta = 0.0
+
 
 # No permitir acceso si falta configuracion
 if not CLAVE_ACCESO:
@@ -58,20 +71,57 @@ if not st.session_state.autenticado:
             "Ingresar al chatbot"
         )
 
+    
     if ingresar:
 
-        if hmac.compare_digest(
+        ahora = time.time()
+
+        if ahora < st.session_state.bloqueado_hasta:
+
+            restante = int(
+                st.session_state.bloqueado_hasta - ahora
+            )
+
+            st.error(
+                "Acceso temporalmente bloqueado. "
+                f"Intenta nuevamente en {restante} segundos."
+            )
+
+        elif hmac.compare_digest(
             password.encode("utf-8"),
             CLAVE_ACCESO.encode("utf-8")
         ):
 
             st.session_state.autenticado = True
+            st.session_state.intentos_fallidos = 0
+            st.session_state.bloqueado_hasta = 0.0
+
             st.rerun()
 
         else:
-            st.error(
-                "Contraseña incorrecta."
-            )
+
+            st.session_state.intentos_fallidos += 1
+
+            if (
+                st.session_state.intentos_fallidos
+                >= MAX_INTENTOS
+            ):
+
+                st.session_state.bloqueado_hasta = (
+                    ahora + BLOQUEO_SEGUNDOS
+                )
+
+                st.session_state.intentos_fallidos = 0
+
+                st.error(
+                    "Demasiados intentos incorrectos. "
+                    "Acceso bloqueado durante 5 minutos."
+                )
+
+            else:
+
+                st.error("Contraseña incorrecta.")
+
 
     st.stop()
 
