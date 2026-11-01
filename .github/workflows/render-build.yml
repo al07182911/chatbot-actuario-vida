@@ -1,0 +1,85 @@
+
+name: Validacion del contenedor Render
+
+on:
+  workflow_dispatch:
+
+jobs:
+  validar-render:
+    name: Construir y probar Render
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Construir imagen Render
+        run: |
+          docker build \
+            -f Dockerfile.render \
+            -t chatbot-actuario-render:test \
+            .
+
+      - name: Iniciar contenedor
+        run: |
+          docker run -d \
+            --name chatbot-render-test \
+            -p 127.0.0.1:8501:8501 \
+            -e PORT=8501 \
+            -e OPENAI_API_KEY=sk-test-no-real \
+            -e CHATBOT_ACCESS_PASSWORD=clave-temporal-de-prueba \
+            chatbot-actuario-render:test
+
+      - name: Esperar disponibilidad de Streamlit
+        run: |
+          for intento in $(seq 1 30); do
+            if curl --fail --silent \
+              --max-time 5 \
+              http://127.0.0.1:8501/_stcore/health; then
+              echo ""
+              echo "STREAMLIT HTTP 200"
+              exit 0
+            fi
+
+            if [ "$(docker inspect -f '{{.State.Running}}' chatbot-render-test)" != "true" ]; then
+              echo "El contenedor se detuvo."
+              docker logs chatbot-render-test
+              exit 1
+            fi
+
+            sleep 3
+          done
+
+          echo "Streamlit no respondio."
+          exit 1
+
+      - name: Verificar FastAPI interno
+        run: |
+          docker exec chatbot-render-test python -c \
+            "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=10); assert r.status == 200; print('FASTAPI HTTP 200')"
+
+      - name: Verificar comunicacion interna
+        run: |
+          docker exec chatbot-render-test python -c \
+            "import requests; r=requests.get('http://127.0.0.1:8000/health',timeout=10); assert r.status_code == 200; print('COMUNICACION INTERNA CORRECTA')"
+
+      - name: Verificar bloqueo sin contraseña
+        run: |
+          docker exec \
+            -e CHATBOT_ACCESS_PASSWORD= \
+            chatbot-render-test \
+            python -c \
+            "import os; assert not os.getenv('CHATBOT_ACCESS_PASSWORD'); print('VARIABLE AUSENTE: CORRECTO')"
+
+      - name: Mostrar registros en caso de error
+        if: failure()
+        run: |
+          docker logs --tail 100 chatbot-render-test || true
+
+      - name: Detener contenedor
+        if: always()
+        run: |
+          docker rm -f chatbot-render-test || true
