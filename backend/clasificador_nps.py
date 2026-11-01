@@ -4,6 +4,9 @@ import os
 
 from openai import OpenAI
 
+from backend.limite_ia import ejecutar_con_limite
+
+
 MODELO_IA = os.getenv("OPENAI_MODEL", "gpt-6-luna")
 
 INSTRUCCIONES_NPS = """
@@ -79,13 +82,14 @@ def clasificar_insatisfaccion(mensaje):
         max_retries=1
     )
 
-    respuesta = cliente.responses.create(
-        model=MODELO_IA,
-        instructions=INSTRUCCIONES_NPS,
-        input=mensaje,
-        max_output_tokens=400,
-        store=False
-    )
+    respuesta = ejecutar_con_limite(
+    cliente.responses.create,
+    model=MODELO_IA,
+    instructions=INSTRUCCIONES_NPS,
+    input=mensaje,
+    max_output_tokens=400,
+    store=False
+)
 
     resultado = json.loads(respuesta.output_text)
 
