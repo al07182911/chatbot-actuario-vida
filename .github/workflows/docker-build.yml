@@ -55,6 +55,15 @@ jobs:
             --retry-connrefused \
             http://127.0.0.1:8501/_stcore/health
 
+      
+      - name: Verificar comunicacion frontend backend
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose exec -T frontend python -c \
+            "import requests; r=requests.get('http://backend:8000/health', timeout=10); assert r.status_code == 200; print('COMUNICACION FRONTEND BACKEND CORRECTA')"
+
+
       - name: Mostrar registros si ocurre un error
         if: failure()
         env:
