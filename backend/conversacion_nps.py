@@ -4,6 +4,7 @@ from backend.registro_nps import (
     DatosCasoNPS,
     registrar_caso_nps
 )
+from backend.limite_ia import CuotaIAAgotada
 
 
 class ConversacionNPS:
@@ -120,6 +121,9 @@ class ConversacionNPS:
                     "¿Deseas solicitar un asesor o continuar "
                     "con la cancelacion?"
                 )
+
+            except CuotaIAAgotada:
+                raise
 
             except Exception:
                 return (
