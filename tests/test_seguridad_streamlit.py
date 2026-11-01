@@ -30,9 +30,9 @@ def test_seg03_sin_password(monkeypatch):
     assert not app.exception
 
     mensajes_error = [
-        elemento.message
-        for elemento in app.error
-    ]
+    str(elemento.value)
+    for elemento in app.error
+]
 
     assert any(
         "El acceso no esta configurado"
