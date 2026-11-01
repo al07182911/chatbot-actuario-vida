@@ -120,13 +120,14 @@ def procesar_mensaje(datos: MensajeCliente):
         )
 
     try:
-        respuesta = ejecutar_con_limite(cliente_ia.responses.create(
-            model="gpt-6-luna",
-            instructions=INSTRUCCIONES,
-            input=datos.mensaje,
-            max_output_tokens=300,
-            store=False
-        ))
+        respuesta = ejecutar_con_limite(
+        cliente_ia.responses.create,
+        model="gpt-6-luna",
+        instructions=INSTRUCCIONES,
+        input=datos.mensaje,
+        max_output_tokens=300,
+        store=False
+    )
 
         resultado = json.loads(
             respuesta.output_text
@@ -152,6 +153,18 @@ def procesar_mensaje(datos: MensajeCliente):
             motivos=motivos,
             explicacion=explicacion,
             estado="clasificado"
+        )
+
+    except CuotaIAAgotada as error:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "Se alcanzo el limite temporal "
+                "de consultas de inteligencia artificial."
+            ),
+            headers={
+                "Retry-After": str(error.segundos)
+            }
         )
 
     except Exception:
@@ -405,13 +418,14 @@ def chat_unificado(datos: SolicitudChatUnificado):
             }
 
         try:
-            respuesta_ia = ejecutar_con_limite(cliente_ia.responses.create(
+            respuesta_ia = ejecutar_con_limite(
+                cliente_ia.responses.create,
                 model="gpt-6-luna",
                 instructions=INSTRUCCIONES,
                 input=mensaje,
                 max_output_tokens=300,
                 store=False
-            ))
+            )
 
             resultado = json.loads(
                 respuesta_ia.output_text
@@ -450,6 +464,18 @@ def chat_unificado(datos: SolicitudChatUnificado):
                 "motivos": motivos,
                 "respuesta": respuesta
             }
+
+        except CuotaIAAgotada as error:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Se alcanzo el limite temporal "
+                    "de consultas de inteligencia artificial."
+                ),
+                headers={
+                    "Retry-After": str(error.segundos)
+                }
+            )
 
         except Exception:
             raise HTTPException(
