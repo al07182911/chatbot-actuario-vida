@@ -1,0 +1,23 @@
+
+name: Validar Docker Compose
+
+on:
+  workflow_dispatch:
+
+jobs:
+  validar:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar configuracion Docker Compose
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose config --quiet
+          echo "Configuracion Docker Compose valida"
