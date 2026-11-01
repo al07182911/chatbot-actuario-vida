@@ -1,0 +1,72 @@
+
+name: Construccion y validacion Docker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  docker:
+    name: Construir y probar contenedores
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar Docker Compose
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose config --quiet
+
+      - name: Construir imagenes Docker
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose build
+
+      - name: Iniciar contenedores
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose up -d
+
+      - name: Comprobar estado de contenedores
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose ps
+
+      - name: Verificar FastAPI
+        run: |
+          curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-connrefused \
+            http://127.0.0.1:8000/health
+
+      - name: Verificar Streamlit
+        run: |
+          curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-connrefused \
+            http://127.0.0.1:8501/_stcore/health
+
+      - name: Mostrar registros si ocurre un error
+        if: failure()
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose ps -a
+          docker compose logs --tail=100
+
+      - name: Detener contenedores
+        if: always()
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+        run: |
+          docker compose down
