@@ -38,6 +38,10 @@ cliente_ia = OpenAI(
     timeout=30.0,
     max_retries=1
 )
+MODELO_IA = os.getenv(
+    "OPENAI_MODEL",
+    "gpt-6-luna"
+)
 
 CATEGORIAS = {
     "economia_personal",
@@ -122,7 +126,7 @@ def procesar_mensaje(datos: MensajeCliente):
     try:
         respuesta = ejecutar_con_limite(
         cliente_ia.responses.create,
-        model="gpt-6-luna",
+        model=MODELO_IA,
         instructions=INSTRUCCIONES,
         input=datos.mensaje,
         max_output_tokens=300,
@@ -437,7 +441,7 @@ def chat_unificado(datos: SolicitudChatUnificado):
         try:
             respuesta_ia = ejecutar_con_limite(
                 cliente_ia.responses.create,
-                model="gpt-6-luna",
+                model=MODELO_IA,,
                 instructions=INSTRUCCIONES,
                 input=mensaje,
                 max_output_tokens=300,
