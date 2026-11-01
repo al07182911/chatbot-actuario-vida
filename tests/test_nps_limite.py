@@ -38,10 +38,11 @@ def test_limite_endpoint_nps():
 
     sesion = inicio.json()["sesion_id"]
 
-    with patch(
-        "backend.conversacion_nps.clasificar_insatisfaccion",
-        side_effect=simular_cuota_agotada
-    ):
+    with patch.object(
+    main.ConversacionNPS,
+    "procesar",
+    side_effect=CuotaIAAgotada(120)
+):
         respuesta = cliente.post(
             "/conversacion/nps",
             json={
@@ -70,10 +71,11 @@ def test_limite_chat_unificado():
 
     main.sesiones_unificadas[sesion_id] = coordinador
 
-    with patch(
-        "backend.conversacion_nps.clasificar_insatisfaccion",
-        side_effect=simular_cuota_agotada
-    ):
+    with patch.object(
+    main.ConversacionNPS,
+    "procesar",
+    side_effect=CuotaIAAgotada(120)
+):
         respuesta = cliente.post(
             "/chat/unificado",
             json={
@@ -99,10 +101,11 @@ def test_retry_after_nps():
 
     sesion = inicio.json()["sesion_id"]
 
-    with patch(
-        "backend.conversacion_nps.clasificar_insatisfaccion",
-        side_effect=simular_cuota_agotada
-    ):
+    with patch.object(
+    main.ConversacionNPS,
+    "procesar",
+    side_effect=CuotaIAAgotada(120)
+):
         respuesta = cliente.post(
             "/conversacion/nps",
             json={
