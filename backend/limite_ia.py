@@ -48,3 +48,18 @@ limite_ia = LimiteIA(
         os.getenv("VENTANA_IA_SEGUNDOS", "3600")
     )
 )
+
+
+class CuotaIAAgotada(Exception):
+    def __init__(self, segundos):
+        self.segundos = segundos
+        super().__init__("Cuota temporal de IA agotada.")
+
+
+def ejecutar_con_limite(funcion, *args, **kwargs):
+    permitido, restante = limite_ia.consumir()
+
+    if not permitido:
+        raise CuotaIAAgotada(restante)
+
+    return funcion(*args, **kwargs)
