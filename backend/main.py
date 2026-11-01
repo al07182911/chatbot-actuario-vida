@@ -360,7 +360,24 @@ def conversar_nps(datos: SolicitudConversacion):
             "folio": conversacion.folio
         }
 
-    respuesta = conversacion.procesar(datos.mensaje)
+    
+    try:
+        respuesta = conversacion.procesar(
+            datos.mensaje
+        )
+
+    except CuotaIAAgotada as error:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "Se alcanzo el limite temporal "
+                "de consultas de inteligencia artificial."
+            ),
+            headers={
+                "Retry-After": str(error.segundos)
+            }
+        )
+
 
     return {
         "sesion_id": datos.sesion_id,
@@ -495,7 +512,20 @@ def chat_unificado(datos: SolicitudChatUnificado):
 
     coordinador = sesiones_unificadas[datos.sesion_id]
 
-    respuesta = coordinador.procesar(mensaje)
+    try:
+        respuesta = coordinador.procesar(mensaje)
+
+    except CuotaIAAgotada as error:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "Se alcanzo el limite temporal "
+                "de consultas de inteligencia artificial."
+            ),
+            headers={
+                "Retry-After": str(error.segundos)
+            }
+        )
 
     return {
         "sesion_id": datos.sesion_id,
