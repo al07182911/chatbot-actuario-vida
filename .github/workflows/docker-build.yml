@@ -41,13 +41,12 @@ jobs:
           docker compose ps
 
       - name: Verificar FastAPI
+        env:
+          OPENAI_API_KEY: sk-test-no-real
         run: |
-          curl --fail --silent --show-error \
-            --retry 12 \
-            --retry-delay 5 \
-            --retry-connrefused \
-            http://127.0.0.1:8000/health
-
+          docker compose exec -T backend python -c \
+            "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=10); assert r.status == 200; print('FASTAPI HTTP 200')"
+      
       - name: Verificar Streamlit
         run: |
           curl --fail --silent --show-error \
