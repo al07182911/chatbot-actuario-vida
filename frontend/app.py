@@ -1,5 +1,5 @@
-
 import os
+import hmac
 import requests
 import streamlit as st
 
@@ -9,6 +9,72 @@ st.set_page_config(
     page_icon="🛡️",
     layout="centered"
 )
+
+
+
+# ==========================================
+# CONTROL DE ACCESO - DEMOSTRACION ACADEMICA
+# ==========================================
+
+CLAVE_ACCESO = os.getenv(
+    "CHATBOT_ACCESS_PASSWORD",
+    ""
+)
+
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
+# No permitir acceso si falta configuracion
+if not CLAVE_ACCESO:
+    st.error(
+        "El acceso no esta configurado. "
+        "Contacta al administrador."
+    )
+    st.stop()
+
+# Pantalla de autenticacion
+if not st.session_state.autenticado:
+
+    st.title("Chatbot Actuario Vida")
+
+    st.subheader(
+        "Acceso a demostracion academica"
+    )
+
+    st.info(
+        "Esta aplicacion es un prototipo academico. "
+        "No utiliza polizas reales ni realiza "
+        "cancelaciones de seguros."
+    )
+
+    with st.form("formulario_acceso"):
+
+        password = st.text_input(
+            "Contraseña de acceso",
+            type="password"
+        )
+
+        ingresar = st.form_submit_button(
+            "Ingresar al chatbot"
+        )
+
+    if ingresar:
+
+        if hmac.compare_digest(
+            password.encode("utf-8"),
+            CLAVE_ACCESO.encode("utf-8")
+        ):
+
+            st.session_state.autenticado = True
+            st.rerun()
+
+        else:
+            st.error(
+                "Contraseña incorrecta."
+            )
+
+    st.stop()
+
 
 # Direccion del backend FastAPI
 API_URL = os.getenv(
@@ -55,6 +121,14 @@ if "finalizada" not in st.session_state:
 with st.sidebar:
 
     st.header("Chatbot Actuario Vida")
+    
+    if st.button(
+        "Cerrar sesion",
+        use_container_width=True
+    ):
+        st.session_state.clear()
+        st.rerun()
+
 
     st.write("Rutas de atencion:")
     st.write("1. Economia personal")
