@@ -1,5 +1,5 @@
 
-from unittest.mock import patch
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -22,7 +22,7 @@ def limpiar_sesiones():
     main.sesiones_unificadas.clear()
 
 
-def simular_cuota_agotada():
+def simular_cuota_agotada(*args, **kwargs):
     raise CuotaIAAgotada(120)
 
 
@@ -38,24 +38,26 @@ def test_limite_endpoint_nps():
 
     sesion = inicio.json()["sesion_id"]
 
-    with patch.object(
-    main.ConversacionNPS,
-    "procesar",
-    side_effect=CuotaIAAgotada(120)
-):
-        respuesta = cliente.post(
-            "/conversacion/nps",
-            json={
-                "sesion_id": sesion,
-                "mensaje": (
-                    "Llevo tres semanas esperando "
-                    "una respuesta y nadie resuelve "
-                    "mi problema."
-                )
-            }
-        )
+    conversacion = main.sesiones_nps[sesion]
+    clasificador = Mock(
+        side_effect=simular_cuota_agotada
+    )
+    conversacion.clasificador = clasificador
+
+    respuesta = cliente.post(
+        "/conversacion/nps",
+        json={
+            "sesion_id": sesion,
+            "mensaje": (
+                "Llevo tres semanas esperando "
+                "una respuesta y nadie resuelve "
+                "mi problema."
+            )
+        }
+    )
 
     assert respuesta.status_code == 429
+    clasificador.assert_called_once()
 
 
 # NPS-429-02
@@ -71,24 +73,28 @@ def test_limite_chat_unificado():
 
     main.sesiones_unificadas[sesion_id] = coordinador
 
-    with patch.object(
-    main.ConversacionNPS,
-    "procesar",
-    side_effect=CuotaIAAgotada(120)
-):
-        respuesta = cliente.post(
-            "/chat/unificado",
-            json={
-                "sesion_id": sesion_id,
-                "mensaje": (
-                    "El asesor me dio informacion "
-                    "incorrecta y nunca resolvio "
-                    "mi solicitud."
-                )
-            }
-        )
+    # Obtener el gestor NPS activo del coordinador
+    conversacion = coordinador.conversacion
+
+    clasificador = Mock(
+        side_effect=simular_cuota_agotada
+    )
+    conversacion.clasificador = clasificador
+
+    respuesta = cliente.post(
+        "/chat/unificado",
+        json={
+            "sesion_id": sesion_id,
+            "mensaje": (
+                "El asesor me dio informacion "
+                "incorrecta y nunca resolvio "
+                "mi solicitud."
+            )
+        }
+    )
 
     assert respuesta.status_code == 429
+    clasificador.assert_called_once()
 
 
 # NPS-429-03
@@ -99,25 +105,28 @@ def test_retry_after_nps():
         json={}
     )
 
+    assert inicio.status_code == 200
+
     sesion = inicio.json()["sesion_id"]
 
-    with patch.object(
-    main.ConversacionNPS,
-    "procesar",
-    side_effect=CuotaIAAgotada(120)
-):
-        respuesta = cliente.post(
-            "/conversacion/nps",
-            json={
-                "sesion_id": sesion,
-                "mensaje": (
-                    "No han resuelto mi reclamacion "
-                    "despues de varias semanas."
-                )
-            }
-        )
+    conversacion = main.sesiones_nps[sesion]
+    conversacion.clasificador = Mock(
+        side_effect=simular_cuota_agotada
+    )
+
+    respuesta = cliente.post(
+        "/conversacion/nps",
+        json={
+            "sesion_id": sesion,
+            "mensaje": (
+                "No han resuelto mi reclamacion "
+                "despues de varias semanas."
+            )
+        }
+    )
 
     assert respuesta.status_code == 429
+
     assert int(
         respuesta.headers["retry-after"]
     ) == 120
@@ -131,23 +140,29 @@ def test_cancelacion_sin_consumir_ia():
         json={}
     )
 
+    assert inicio.status_code == 200
+
     sesion = inicio.json()["sesion_id"]
 
-    with patch(
-        "backend.conversacion_nps.clasificar_insatisfaccion",
+    conversacion = main.sesiones_nps[sesion]
+
+    clasificador = Mock(
         side_effect=AssertionError(
             "No debe consultar OpenAI"
         )
-    ) as clasificador:
+    )
 
-        respuesta = cliente.post(
-            "/conversacion/nps",
-            json={
-                "sesion_id": sesion,
-                "mensaje": "cancelar"
-            }
-        )
+    conversacion.clasificador = clasificador
+
+    respuesta = cliente.post(
+        "/conversacion/nps",
+        json={
+            "sesion_id": sesion,
+            "mensaje": "cancelar"
+        }
+    )
 
     assert respuesta.status_code == 200
     assert respuesta.json()["estado"] == "cancelacion"
+
     clasificador.assert_not_called()
