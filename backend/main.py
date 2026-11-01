@@ -441,7 +441,7 @@ def chat_unificado(datos: SolicitudChatUnificado):
         try:
             respuesta_ia = ejecutar_con_limite(
                 cliente_ia.responses.create,
-                model=MODELO_IA,,
+                model=MODELO_IA,
                 instructions=INSTRUCCIONES,
                 input=mensaje,
                 max_output_tokens=300,
