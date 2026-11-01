@@ -218,3 +218,42 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# ==========================================
+# CHATBOT ACTUARIO VIDA - CONFIGURACION
+# ==========================================
+
+# Credenciales y variables de entorno
+.env
+.env.*
+!.env.example
+
+# Archivos de claves y secretos
+*.pem
+*.key
+secrets.json
+
+# Configuracion privada de Streamlit
+.streamlit/secrets.toml
+
+# Registros temporales de ejecucion
+*.log
+
+# Archivos temporales
+*.tmp
+*.bak
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Resultados temporales de pruebas
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+
