@@ -19,6 +19,13 @@ import os
 from typing import List
 import json
 
+
+from backend.limite_ia import (
+    ejecutar_con_limite,
+    CuotaIAAgotada
+)
+
+
 app = FastAPI(
     title="Chatbot Actuario Vida",
     description="API academica de retencion responsable",
@@ -113,13 +120,13 @@ def procesar_mensaje(datos: MensajeCliente):
         )
 
     try:
-        respuesta = cliente_ia.responses.create(
+        respuesta = ejecutar_con_limite(cliente_ia.responses.create(
             model="gpt-6-luna",
             instructions=INSTRUCCIONES,
             input=datos.mensaje,
             max_output_tokens=300,
             store=False
-        )
+        ))
 
         resultado = json.loads(
             respuesta.output_text
@@ -398,13 +405,13 @@ def chat_unificado(datos: SolicitudChatUnificado):
             }
 
         try:
-            respuesta_ia = cliente_ia.responses.create(
+            respuesta_ia = ejecutar_con_limite(cliente_ia.responses.create(
                 model="gpt-6-luna",
                 instructions=INSTRUCCIONES,
                 input=mensaje,
                 max_output_tokens=300,
                 store=False
-            )
+            ))
 
             resultado = json.loads(
                 respuesta_ia.output_text
