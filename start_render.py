@@ -32,7 +32,7 @@ def esperar_backend():
     return False
 
 
-def detener_procesos(signum=None, frame=None):
+def detener_procesos(signum=None, frame=None, *, codigo_salida=0):
     for proceso in [frontend, backend]:
         if proceso.poll() is None:
             proceso.terminate()
@@ -44,7 +44,7 @@ def detener_procesos(signum=None, frame=None):
             except subprocess.TimeoutExpired:
                 proceso.kill()
 
-    sys.exit(0)
+    sys.exit(codigo_salida)
 
 
 # Variables de entorno
@@ -101,13 +101,13 @@ while True:
             "ERROR: FastAPI se detuvo.",
             flush=True
         )
-        detener_procesos()
+        detener_procesos(codigo_salida=1)
 
     if frontend.poll() is not None:
         print(
             "ERROR: Streamlit se detuvo.",
             flush=True
         )
-        detener_procesos()
+        detener_procesos(codigo_salida=1)
 
     time.sleep(2)

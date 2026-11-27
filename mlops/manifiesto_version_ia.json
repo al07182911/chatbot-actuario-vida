@@ -1,10 +1,10 @@
 {
-    "version": "0.2.0",
-    "version_anterior": "0.1.0",
-    "timestamp_utc": "2026-11-27T23:14:14.716406+00:00",
+    "version": "0.3.0",
+    "version_anterior": "0.2.0",
+    "timestamp_utc": "2026-11-27T23:37:45.115763+00:00",
     "proyecto": "Chatbot Actuario Vida",
     "commit_base": "de12c62568776e6d131f19b0df9a598050f1c9f8",
-    "commit_previo_actualizacion": "843c765971d24331b6a7a0527b931cd012bc4fdc",
+    "commit_previo_actualizacion": "4f902b53a4c7173c16c2241789bdbd9516390434",
     "rama": "fase3-mlops-ci",
     "modelo_externo_default": "gpt-6-luna",
     "modelo_real_validado": false,
@@ -49,18 +49,98 @@
             "archivo": "tests/test_calidad_datos.py",
             "sha256": "4109e5d0410b430bf4441d98e94f59de5c040570da6c4d0a4f3ff73d69e2b073",
             "tamano_bytes": 3874
+        },
+        {
+            "archivo": ".github/workflows/mlops-ci.yml",
+            "sha256": "8eb914638dc81b64011d9e82ecae6a1fd60dc82890260e7ce0d824a0ff8e13a4",
+            "tamano_bytes": 6606
+        },
+        {
+            "archivo": "Dockerfile.render",
+            "sha256": "3a79aa4ef5b24ec892f6cf7c050445944f137233b8e7fd0d547f96aff6b2e095",
+            "tamano_bytes": 1066
+        },
+        {
+            "archivo": "backend/requirements.txt",
+            "sha256": "d1ca2e5c19b7e9f05b56f03d4c5d1d1b2cffd9c422d51d60a70e59a5ed800a27",
+            "tamano_bytes": 93
+        },
+        {
+            "archivo": "frontend/requirements.txt",
+            "sha256": "ed1ecba872908e4c9099a0ca05c604155e4297f04ab0c82f1f5df8196618666d",
+            "tamano_bytes": 35
+        },
+        {
+            "archivo": "compose.yaml",
+            "sha256": "fbbe5dae7325373931013819a7bb419f020db952a9f3d7aa0d03fe596d41302c",
+            "tamano_bytes": 831
+        },
+        {
+            "archivo": "start_render.py",
+            "sha256": "ce836593957bfba1654d9c977ab8d789a5d97cc5cc6e08acb5c231b6faf5a593",
+            "tamano_bytes": 2300
+        },
+        {
+            "archivo": "healthcheck.py",
+            "sha256": "a85337e72448920511cf53d1e320a9d8c8ce83c5f243efabfed8a8b56a71cc00",
+            "tamano_bytes": 962
+        },
+        {
+            "archivo": "tests/test_healthcheck.py",
+            "sha256": "3c5e28bbf477a46c8db474eff0c9f1a47c5ace3c54f42617321e8f718ea7caed",
+            "tamano_bytes": 3012
+        },
+        {
+            "archivo": "tests/test_supervisor.py",
+            "sha256": "30b2de2916e62b6cfcf9a7c10579882a097cb1aff6f63f364126e9be2342dc0b",
+            "tamano_bytes": 4986
         }
     ],
     "validaciones_locales": {
-        "pruebas_aprobadas": 72,
+        "pruebas_aprobadas": 90,
         "fallos": 0,
+        "errores": 0,
+        "omitidas": 0,
         "cobertura_backend_pct": 84.30493273542601,
         "controles_calidad_datos": 11,
-        "escenarios_negativos_evaluados": 10,
-        "defectos_simulados_detectados": 10
+        "defectos_simulados_detectados": 10,
+        "pruebas_healthcheck": 10,
+        "cobertura_healthcheck_pct": 86.95652173913044,
+        "pruebas_supervisor": 8,
+        "cobertura_supervisor_pct": 96.0,
+        "dependencias_directas_fijadas": 8,
+        "pip_check_aislado_satisfactorio": true
     },
-    "entorno_validacion": "Google Colab",
-    "validacion_github_actions_v0_2_0": false,
+    "pipeline": {
+        "trabajos": [
+            "calidad",
+            "docker"
+        ],
+        "docker_depende_de": "calidad",
+        "pasos_calidad": 7,
+        "pasos_docker": 14,
+        "cobertura_minima_pct": 80,
+        "python_objetivo": "3.11",
+        "healthcheck_integrado": true,
+        "publicacion_evidencias": true
+    },
+    "validaciones_pendientes": {
+        "compatibilidad_python_3_11": true,
+        "ejecucion_github_actions_v0_3_0": true,
+        "construccion_docker": true,
+        "healthcheck_real_docker": true,
+        "supervisor_real_docker": true,
+        "seguridad_funcional_compose": true,
+        "despliegue_continuo": true
+    },
+    "dependencias_transitivas_fijadas": false,
+    "imagen_base_con_digest_fijo": false,
     "despliegue_realizado": false,
-    "nota": "Version academica de codigo, configuracion, datos y pruebas. No representa versionado de pesos del modelo externo."
+    "nota": "Version academica de codigo, datos, configuracion, pruebas e infraestructura. No representa versionado de pesos del modelo externo.",
+    "correccion_preventiva": {
+        "timestamp_utc": "2026-11-27T23:39:42.513107+00:00",
+        "descripcion": "Declaracion explicita de BACKEND_URL en Dockerfile.render",
+        "commit_local_previo": "cbc36cd6a3cabbc2f364a8ebcabe935232a2352e",
+        "validacion_funcional_docker": false
+    }
 }
