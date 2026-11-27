@@ -1,8 +1,11 @@
 {
-    "version": "0.1.0",
-    "timestamp_utc": "2026-11-27T22:35:36.233314+00:00",
+    "version": "0.2.0",
+    "version_anterior": "0.1.0",
+    "timestamp_utc": "2026-11-27T23:14:14.716406+00:00",
     "proyecto": "Chatbot Actuario Vida",
     "commit_base": "de12c62568776e6d131f19b0df9a598050f1c9f8",
+    "commit_previo_actualizacion": "843c765971d24331b6a7a0527b931cd012bc4fdc",
+    "rama": "fase3-mlops-ci",
     "modelo_externo_default": "gpt-6-luna",
     "modelo_real_validado": false,
     "pesos_modelo_versionados": false,
@@ -31,9 +34,33 @@
             "archivo": "tests/test_nps_cobertura.py",
             "sha256": "3aba569a0f01bb0652939f07195f96e4038ec8cdbc416fa4c861049512383c6e",
             "tamano_bytes": 5054
+        },
+        {
+            "archivo": "data/beneficios_polizas.json",
+            "sha256": "d8b164f2a19989f0ed65854b2ebc873b860d426b1bc9f1061e264a71b97b74a6",
+            "tamano_bytes": 1119
+        },
+        {
+            "archivo": "backend/beneficios.py",
+            "sha256": "017a86a6e8abeff0e5fcdeec0bfaca1d913a7547f88918c797a3d651abe23d00",
+            "tamano_bytes": 1369
+        },
+        {
+            "archivo": "tests/test_calidad_datos.py",
+            "sha256": "4109e5d0410b430bf4441d98e94f59de5c040570da6c4d0a4f3ff73d69e2b073",
+            "tamano_bytes": 3874
         }
     ],
-    "entorno": "Google Colab",
+    "validaciones_locales": {
+        "pruebas_aprobadas": 72,
+        "fallos": 0,
+        "cobertura_backend_pct": 84.30493273542601,
+        "controles_calidad_datos": 11,
+        "escenarios_negativos_evaluados": 10,
+        "defectos_simulados_detectados": 10
+    },
+    "entorno_validacion": "Google Colab",
+    "validacion_github_actions_v0_2_0": false,
     "despliegue_realizado": false,
-    "nota": "Version academica de configuracion y codigo. No representa versionado de pesos del modelo."
+    "nota": "Version academica de codigo, configuracion, datos y pruebas. No representa versionado de pesos del modelo externo."
 }
