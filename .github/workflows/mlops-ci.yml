@@ -1,0 +1,63 @@
+name: MLOps CI - Chatbot Actuario Vida
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  calidad:
+    name: Calidad, integridad y pruebas
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            frontend/requirements.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r frontend/requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Validar integridad de artefactos
+        run: |
+          python scripts/validar_artefactos.py \
+            mlops/manifiesto_version_ia.json .
+
+      - name: Ejecutar pruebas y medir cobertura
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+          CHATBOT_ACCESS_PASSWORD: clave-ficticia-para-pruebas
+        run: |
+          mkdir -p evidencias_ci
+          python -m pytest tests/ -v \
+            --cov=backend \
+            --cov-fail-under=80 \
+            --cov-report=term-missing \
+            --cov-report=json:evidencias_ci/coverage.json \
+            --junitxml=evidencias_ci/pytest_resultados.xml
+
+      - name: Publicar evidencias
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-mlops-ci
+          path: evidencias_ci/
+          if-no-files-found: warn
+          retention-days: 30
