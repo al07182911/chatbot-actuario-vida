@@ -120,3 +120,5 @@ def clasificar_insatisfaccion(mensaje):
         )
 
     return resultado
+
+# GITOPS-NEG-01: alteracion simulada para prueba de integridad SHA-256.
