@@ -1,0 +1,221 @@
+name: MLOps CI - Chatbot Actuario Vida
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  calidad:
+    name: Calidad, integridad y pruebas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            frontend/requirements.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install \
+            -r backend/requirements.txt \
+            -r frontend/requirements.txt \
+            pytest-cov==7.1.0
+
+      - name: Verificar consistencia de dependencias
+        run: |
+          mkdir -p evidencias_ci
+          python -m pip check | tee evidencias_ci/pip_check.txt
+          python -m pip freeze > evidencias_ci/dependencias.txt
+
+      - name: Validar integridad de artefactos
+        run: |
+          python scripts/validar_artefactos.py \
+            mlops/manifiesto_version_ia.json .
+
+      - name: Ejecutar pruebas y medir cobertura
+        env:
+          OPENAI_API_KEY: sk-test-no-real
+          CHATBOT_ACCESS_PASSWORD: clave-ficticia-para-pruebas
+        run: |
+          mkdir -p evidencias_ci
+          python -m pytest tests/ -v \
+            --cov=backend \
+            --cov-fail-under=80 \
+            --cov-report=term-missing \
+            --cov-report=json:evidencias_ci/coverage.json \
+            --junitxml=evidencias_ci/pytest_resultados.xml
+
+      - name: Publicar evidencias
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-mlops-ci
+          path: evidencias_ci/
+          if-no-files-found: warn
+          retention-days: 30
+
+  docker:
+    name: Construccion y validacion Docker
+    needs: calidad
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    env:
+      IMAGEN: chatbot-actuario-vida:${{ github.sha }}
+      CONTENEDOR: chatbot-mlops-ci
+      OPENAI_API_KEY: sk-test-no-real
+      CHATBOT_ACCESS_PASSWORD: clave-ficticia-para-pruebas
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar evidencias Docker
+        run: |
+          mkdir -p evidencias_docker
+          docker version > evidencias_docker/docker_version.txt
+          docker compose version > evidencias_docker/compose_version.txt
+          git rev-parse HEAD > evidencias_docker/commit.txt
+
+      - name: Validar Docker Compose
+        run: |
+          docker compose config --quiet
+          echo "Docker Compose valido" \
+            | tee evidencias_docker/compose_validacion.txt
+
+      - name: Construir imagen Docker
+        run: |
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            -f Dockerfile.render \
+            -t "$IMAGEN" \
+            . 2>&1 | tee evidencias_docker/docker_build.log
+
+          docker image inspect "$IMAGEN" \
+            > evidencias_docker/imagen_inspect.json
+
+      - name: Iniciar contenedor temporal
+        run: |
+          docker run -d \
+            --name "$CONTENEDOR" \
+            -p 127.0.0.1:8501:8501 \
+            -e PORT=8501 \
+            -e OPENAI_API_KEY \
+            -e CHATBOT_ACCESS_PASSWORD \
+            "$IMAGEN"
+
+      - name: Esperar estado saludable
+        run: |
+          for intento in $(seq 1 60); do
+
+            estado=$(docker inspect \
+              -f '{{.State.Health.Status}}' "$CONTENEDOR")
+
+            activo=$(docker inspect \
+              -f '{{.State.Running}}' "$CONTENEDOR")
+
+            echo "Intento $intento: $estado" \
+              | tee -a evidencias_docker/healthcheck.log
+
+            if [ "$activo" != "true" ]; then
+              echo "El contenedor se detuvo."
+              exit 1
+            fi
+
+            if [ "$estado" = "healthy" ]; then
+              echo "HEALTHCHECK CORRECTO"
+              exit 0
+            fi
+
+            sleep 3
+
+          done
+
+          echo "El contenedor no alcanzo estado healthy."
+          exit 1
+
+      - name: Verificar FastAPI interno
+        run: |
+          docker exec "$CONTENEDOR" python -c \
+            "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=10); assert r.status == 200; print('FASTAPI HTTP 200')" \
+            | tee evidencias_docker/fastapi.txt
+
+      - name: Verificar Streamlit
+        run: |
+          curl --fail --silent --show-error \
+            --max-time 10 \
+            http://127.0.0.1:8501/_stcore/health
+
+          echo "STREAMLIT HTTP 200" \
+            | tee evidencias_docker/streamlit.txt
+
+      - name: Verificar comunicacion interna
+        run: |
+          docker exec "$CONTENEDOR" python -c \
+            "import os, requests; r=requests.get(os.environ['BACKEND_URL']+'/health', timeout=10); assert r.status_code == 200; print('BACKEND_URL HTTP 200')" \
+            | tee evidencias_docker/comunicacion.txt
+
+      - name: Verificar usuario sin privilegios
+        run: |
+          docker exec "$CONTENEDOR" python -c \
+            "import os; assert os.getuid() != 0; print('Usuario sin privilegios:', os.getuid())" \
+            | tee evidencias_docker/usuario.txt
+
+      - name: Verificar dependencias dentro de Docker
+        run: |
+          docker exec "$CONTENEDOR" python --version \
+            | tee evidencias_docker/python_version.txt
+
+          docker exec "$CONTENEDOR" python -m pip check \
+            | tee evidencias_docker/pip_check.txt
+
+          docker exec "$CONTENEDOR" python -m pip freeze \
+            > evidencias_docker/dependencias.txt
+
+      - name: Recuperar evidencias operativas
+        if: always()
+        run: |
+          mkdir -p evidencias_docker
+
+          docker ps -a \
+            > evidencias_docker/contenedores.txt
+
+          docker logs "$CONTENEDOR" \
+            > evidencias_docker/contenedor.log 2>&1 || true
+
+          docker inspect \
+            --format '{{json .State}}' "$CONTENEDOR" \
+            > evidencias_docker/estado_contenedor.json || true
+
+      - name: Publicar evidencias Docker
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-mlops-docker
+          path: evidencias_docker/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Eliminar contenedor temporal
+        if: always()
+        run: |
+          docker rm -f "$CONTENEDOR" || true

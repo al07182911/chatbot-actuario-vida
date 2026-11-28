@@ -5,6 +5,7 @@ FROM python:3.11-slim
 # Configuracion de Python
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV BACKEND_URL=http://127.0.0.1:8000
 
 # Directorio de trabajo
 WORKDIR /app
@@ -25,6 +26,7 @@ COPY data/ /app/data/
 
 # Copiar script de inicio
 COPY start_render.py /app/start_render.py
+COPY healthcheck.py /app/healthcheck.py
 
 # Crear usuario sin privilegios
 RUN useradd --create-home appuser \
@@ -36,4 +38,8 @@ USER appuser
 EXPOSE 8501
 
 # Iniciar ambos servicios
+# Comprobar disponibilidad de ambos servicios
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["python", "/app/healthcheck.py"]
+
 CMD ["python", "start_render.py"]

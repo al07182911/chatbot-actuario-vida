@@ -33,6 +33,7 @@ services:
 
     environment:
       BACKEND_URL: http://backend:8000
+      CHATBOT_ACCESS_PASSWORD: ${CHATBOT_ACCESS_PASSWORD:-}
 
     ports:
       - "8501:8501"
